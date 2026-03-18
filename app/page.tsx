@@ -10,74 +10,83 @@ export default function HomePage() {
   const [message, setMessage] = useState("");
 
   async function handleParticipantLogin() {
-    setMessage("");
+  setMessage("");
 
-    const cleanName = name.trim();
+  const cleanName = name.trim();
 
-    if (!cleanName) {
-      setMessage("Please enter your name.");
-      return;
-    }
+  if (!cleanName) {
+    setMessage("Please enter your name.");
+    return;
+  }
 
-    const { data: config, error: configError } = await supabase
-      .from("game_config")
+  const { data: config, error: configError } = await supabase
+    .from("game_config")
+    .select("*")
+    .eq("room_code", "default-room")
+    .single();
+
+  if (configError || !config) {
+    console.error("Participant config error:", configError);
+    setMessage(
+      `Could not load game configuration: ${configError?.message || "No config row found."}`
+    );
+    return;
+  }
+
+  if (participantPassword !== config.participant_pin) {
+    setMessage("Participant password is incorrect.");
+    return;
+  }
+
+  const { data: existingParticipant, error: existingParticipantError } =
+    await supabase
+      .from("participants")
       .select("*")
       .eq("room_code", "default-room")
-      .single();
+      .eq("display_name", cleanName)
+      .maybeSingle();
 
-    if (configError || !config) {
-      console.error("Participant config error:", configError);
-      setMessage(
-        `Could not load game configuration: ${configError?.message || "No config row found."}`
-      );
-      return;
-    }
+  if (existingParticipantError) {
+    console.error("Participant lookup error:", existingParticipantError);
+    setMessage(
+      `Could not check participant: ${existingParticipantError.message}`
+    );
+    return;
+  }
 
-    if (participantPassword !== config.participant_pin) {
-      setMessage("Participant password is incorrect.");
-      return;
-    }
-
-    const { data: existingParticipant, error: existingParticipantError } =
-      await supabase
+  if (existingParticipant) {
+    if (existingParticipant.is_removed) {
+      const { error: reactivateError } = await supabase
         .from("participants")
-        .select("*")
-        .eq("room_code", "default-room")
-        .eq("display_name", cleanName)
-        .maybeSingle();
+        .update({ is_removed: false })
+        .eq("id", existingParticipant.id);
 
-    if (existingParticipantError) {
-      console.error("Participant lookup error:", existingParticipantError);
-      setMessage(
-        `Could not check participant: ${existingParticipantError.message}`
-      );
-      return;
-    }
-
-    if (existingParticipant?.is_removed) {
-      setMessage(
-        "This participant name was removed by the admin. Use another name."
-      );
-      return;
-    }
-
-    if (!existingParticipant) {
-      const { error: insertError } = await supabase.from("participants").insert({
-        room_code: "default-room",
-        display_name: cleanName,
-      });
-
-      if (insertError) {
-        console.error("Participant insert error:", insertError);
-        setMessage(`Could not create participant: ${insertError.message}`);
+      if (reactivateError) {
+        console.error("Participant reactivation error:", reactivateError);
+        setMessage(
+          `Could not reactivate participant: ${reactivateError.message}`
+        );
         return;
       }
     }
+  } else {
+    const { error: insertError } = await supabase.from("participants").insert({
+      room_code: "default-room",
+      display_name: cleanName,
+      is_removed: false,
+    });
 
-    sessionStorage.setItem("macro_role", "participant");
-    sessionStorage.setItem("macro_name", cleanName);
-    window.location.href = "/student";
+    if (insertError) {
+      console.error("Participant insert error:", insertError);
+      setMessage(`Could not create participant: ${insertError.message}`);
+      return;
+    }
   }
+
+  sessionStorage.setItem("macro_role", "participant");
+  sessionStorage.setItem("macro_name", cleanName);
+  window.location.href = "/student";
+}
 
   async function handleAdminLogin() {
     setMessage("");

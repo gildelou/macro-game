@@ -430,7 +430,7 @@ export default function AdminPage() {
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold">Admin dashboard</h1>
-            <p className="text-slate-600">
+            <p className="text-slate-800">
               Manage participants, rounds, submissions, and results.
             </p>
           </div>
@@ -450,28 +450,28 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border bg-white p-6">
+        <div className="rounded-2xl border-slate-300 bg-white p-6">
           <div className="grid gap-4 md:grid-cols-5">
             <div className="rounded-xl border p-4">
-              <div className="text-sm text-slate-500">Round</div>
+              <div className="text-sm text-slate-700">Round</div>
               <div className="text-2xl font-bold">
                 {config?.game_finished ? config.max_rounds : currentRound} / {config?.max_rounds}
               </div>
             </div>
             <div className="rounded-xl border p-4">
-              <div className="text-sm text-slate-500">Participants</div>
+              <div className="text-sm text-slate-700">Participants</div>
               <div className="text-2xl font-bold">{activeParticipants.length}</div>
             </div>
             <div className="rounded-xl border p-4">
-              <div className="text-sm text-slate-500">Submitted</div>
+              <div className="text-sm text-slate-700">Submitted</div>
               <div className="text-2xl font-bold">{submittedCount}</div>
             </div>
             <div className="rounded-xl border p-4">
-              <div className="text-sm text-slate-500">Participant password</div>
+              <div className="text-sm text-slate-700">Participant password</div>
               <div className="text-2xl font-bold">{config?.participant_pin}</div>
             </div>
             <div className="rounded-xl border p-4">
-              <div className="text-sm text-slate-500">Target</div>
+              <div className="text-sm text-slate-700">Target</div>
               <div className="text-2xl font-bold">80 / 20</div>
             </div>
           </div>
@@ -484,28 +484,28 @@ export default function AdminPage() {
         )}
 
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="rounded-2xl border bg-white p-6 lg:col-span-2">
+          <div className="rounded-2xl border-slate-300 bg-white p-6 lg:col-span-2">
             <h2 className="text-xl font-semibold">Current round status</h2>
             <div className="mt-4 space-y-4">
               <div className="grid gap-4 md:grid-cols-4">
                 <div className="rounded-xl border p-4">
-                  <div className="text-sm text-slate-500">Current round</div>
+                  <div className="text-sm text-slate-700">Current round</div>
                   <div className="text-2xl font-bold">{currentRound}</div>
                 </div>
                 <div className="rounded-xl border p-4">
-                  <div className="text-sm text-slate-500">Submissions</div>
+                  <div className="text-sm text-slate-700">Submissions</div>
                   <div className="text-2xl font-bold">
                     {submittedCount} / {activeParticipants.length}
                   </div>
                 </div>
                 <div className="rounded-xl border p-4">
-                  <div className="text-sm text-slate-500">Round status</div>
+                  <div className="text-sm text-slate-700">Round status</div>
                   <div className="text-2xl font-bold">
                     {currentRoundRow?.is_closed ? "Closed" : "Open"}
                   </div>
                 </div>
                 <div className="rounded-xl border p-4">
-                  <div className="text-sm text-slate-500">Game status</div>
+                  <div className="text-sm text-slate-700">Game status</div>
                   <div className="text-2xl font-bold">
                     {config?.game_finished ? "Finished" : "Active"}
                   </div>
@@ -548,11 +548,11 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border bg-white p-6">
+          <div className="rounded-2xl border-slate-300 bg-white p-6">
             <h2 className="text-xl font-semibold">Participants</h2>
             <div className="mt-4 space-y-3">
               {activeParticipants.length === 0 && (
-                <div className="text-sm text-slate-500">No active participants yet.</div>
+                <div className="text-sm text-slate-700">No active participants yet.</div>
               )}
               {activeParticipants.map((participant) => (
                 <div
@@ -572,7 +572,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border bg-white p-6">
+        <div className="rounded-2xl border-slate-300 bg-white p-6">
           <h2 className="text-xl font-semibold">Current round submissions</h2>
           <div className="mt-4 space-y-3">
             {activeParticipants.map((participant) => {
@@ -592,7 +592,7 @@ export default function AdminPage() {
                         Submitted: <strong>{submission.consumption}</strong>
                       </span>
                     ) : (
-                      <span className="text-slate-500">Not yet submitted</span>
+                      <span className="text-slate-700">Not yet submitted</span>
                     )}
                   </div>
                 </div>
@@ -601,7 +601,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border bg-white p-6">
+        <div className="rounded-2xl border-slate-300 bg-white p-6">
           <h2 className="text-xl font-semibold">Leaderboard</h2>
           <div className="mt-4 space-y-3">
             {leaderboard.map((entry, index) => (
@@ -621,11 +621,11 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border bg-white p-6">
+        <div className="rounded-2xl border-slate-300 bg-white p-6">
           <h2 className="text-xl font-semibold">Round history</h2>
           <div className="mt-4 space-y-6">
             {rounds.length === 0 && (
-              <div className="text-sm text-slate-500">No rounds yet.</div>
+              <div className="text-sm text-slate-700">No rounds yet.</div>
             )}
 
             {rounds.map((round) => {
@@ -682,7 +682,7 @@ export default function AdminPage() {
         </div>
 
         {config?.game_finished && leaderboard[0] && (
-          <div className="rounded-2xl border bg-white p-6">
+          <div className="rounded-2xl border-slate-300 bg-white p-6">
             <h2 className="text-xl font-semibold">Winner</h2>
             <p className="mt-3 text-lg">
               <strong>{leaderboard[0].participantName}</strong> wins with an average

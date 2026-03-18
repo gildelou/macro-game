@@ -250,7 +250,7 @@ console.log("Submission saved for participant:", participant.id, "round:", curre
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Student dashboard</h1>
-            <p className="text-slate-600">Welcome, {name}.</p>
+            <p className="text-slate-800">Welcome, {name}.</p>
           </div>
           <button
             onClick={logout}
@@ -261,26 +261,26 @@ console.log("Submission saved for participant:", participant.id, "round:", curre
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border bg-white p-5">
-            <div className="text-sm text-slate-500">Goal</div>
+          <div className="rounded-2xl border-slate-300 bg-white p-5">
+            <div className="text-sm text-slate-700">Goal</div>
             <div className="mt-2 text-3xl font-bold">80% / 20%</div>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-800">
               Try to get as close as possible to 80% consumption and 20% saving.
             </p>
           </div>
 
-          <div className="rounded-2xl border bg-white p-5">
-            <div className="text-sm text-slate-500">Current round</div>
+          <div className="rounded-2xl border-slate-300 bg-white p-5">
+            <div className="text-sm text-slate-700">Current round</div>
             <div className="mt-2 text-3xl font-bold">
               {config?.game_finished ? "Finished" : currentRound}
             </div>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-800">
               Enter a whole number from 0 to 1000.
             </p>
           </div>
 
-          <div className="rounded-2xl border bg-white p-5">
-            <div className="text-sm text-slate-500">Latest market signal</div>
+          <div className="rounded-2xl border-slate-300 bg-white p-5">
+            <div className="text-sm text-slate-700">Latest market signal</div>
             {priorRound ? (
               <div className="mt-2 space-y-1 text-sm">
                 <div>Aggregate consumption: <strong>{priorRound.aggregate_consumption}</strong></div>
@@ -289,7 +289,7 @@ console.log("Submission saved for participant:", participant.id, "round:", curre
                 <div>Income per participant: <strong>{priorRound.income_per_participant}</strong></div>
               </div>
             ) : (
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 text-sm text-slate-800">
                 No previous round yet.
               </p>
             )}
@@ -297,7 +297,7 @@ console.log("Submission saved for participant:", participant.id, "round:", curre
         </div>
 
         {!config?.game_finished && (
-          <div className="rounded-2xl border bg-white p-6">
+          <div className="rounded-2xl border-slate-300 bg-white p-6">
             <h2 className="text-xl font-semibold">Submit for round {currentRound}</h2>
             <div className="mt-4 space-y-4">
               <div>
@@ -328,46 +328,46 @@ console.log("Submission saved for participant:", participant.id, "round:", curre
         )}
 
         {currentResult && (
-          <div className="rounded-2xl border bg-white p-6">
+          <div className="rounded-2xl border-slate-300 bg-white p-6">
             <h2 className="text-xl font-semibold">Your round {currentRound} result</h2>
             <div className="mt-4 grid gap-4 md:grid-cols-4">
               <div className="rounded-xl border p-4">
-                <div className="text-sm text-slate-500">Income</div>
+                <div className="text-sm text-slate-700">Income</div>
                 <div className="text-2xl font-bold">{currentResult.income}</div>
               </div>
               <div className="rounded-xl border p-4">
-                <div className="text-sm text-slate-500">Consumed</div>
+                <div className="text-sm text-slate-700">Consumed</div>
                 <div className="text-2xl font-bold">{currentResult.consumption_share}%</div>
               </div>
               <div className="rounded-xl border p-4">
-                <div className="text-sm text-slate-500">Saved</div>
+                <div className="text-sm text-slate-700">Saved</div>
                 <div className="text-2xl font-bold">{currentResult.saving_share}%</div>
               </div>
               <div className="rounded-xl border p-4">
-                <div className="text-sm text-slate-500">Distance to target</div>
+                <div className="text-sm text-slate-700">Distance to target</div>
                 <div className="text-2xl font-bold">{currentResult.distance_to_target}</div>
               </div>
             </div>
           </div>
         )}
 
-        <div className="rounded-2xl border bg-white p-6">
+        <div className="rounded-2xl border-slate-300 bg-white p-6">
           <h2 className="text-xl font-semibold">Your performance so far</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-4">
             <div className="rounded-xl border p-4">
-              <div className="text-sm text-slate-500">Average consumption share</div>
+              <div className="text-sm text-slate-700">Average consumption share</div>
               <div className="text-2xl font-bold">{averages.avgConsumption}%</div>
             </div>
             <div className="rounded-xl border p-4">
-              <div className="text-sm text-slate-500">Average saving share</div>
+              <div className="text-sm text-slate-700">Average saving share</div>
               <div className="text-2xl font-bold">{averages.avgSaving}%</div>
             </div>
             <div className="rounded-xl border p-4">
-              <div className="text-sm text-slate-500">Average distance</div>
+              <div className="text-sm text-slate-700">Average distance</div>
               <div className="text-2xl font-bold">{averages.avgDistance}</div>
             </div>
             <div className="rounded-xl border p-4">
-              <div className="text-sm text-slate-500">Rounds played</div>
+              <div className="text-sm text-slate-700">Rounds played</div>
               <div className="text-2xl font-bold">{averages.roundsPlayed}</div>
             </div>
           </div>

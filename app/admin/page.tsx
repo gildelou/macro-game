@@ -64,6 +64,7 @@ function round2(n: number) {
 }
 
 export default function AdminPage() {
+  const [roomCode, setRoomCode] = useState("");
   const [config, setConfig] = useState<GameConfig | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -74,40 +75,44 @@ export default function AdminPage() {
 
   async function loadAll() {
     const role = sessionStorage.getItem("macro_role");
-    if (role !== "admin") {
+    const storedRoomCode = sessionStorage.getItem("macro_room_code");
+
+    if (role !== "admin" || !storedRoomCode) {
       setMessage("Your admin session was not found. Please log in again.");
       setLoading(false);
       return;
     }
 
+    setRoomCode(storedRoomCode);
+
     const { data: configData } = await supabase
       .from("game_config")
       .select("*")
-      .eq("room_code", "default-room")
+      .eq("room_code", storedRoomCode)
       .single();
 
     const { data: participantData } = await supabase
       .from("participants")
       .select("*")
-      .eq("room_code", "default-room")
+      .eq("room_code", storedRoomCode)
       .order("created_at", { ascending: true });
 
     const { data: submissionData } = await supabase
       .from("submissions")
       .select("*")
-      .eq("room_code", "default-room")
+      .eq("room_code", storedRoomCode)
       .order("round_number", { ascending: true });
 
     const { data: roundData } = await supabase
       .from("rounds")
       .select("*")
-      .eq("room_code", "default-room")
+      .eq("room_code", storedRoomCode)
       .order("round_number", { ascending: true });
 
     const { data: resultData } = await supabase
       .from("round_results")
       .select("*")
-      .eq("room_code", "default-room")
+      .eq("room_code", storedRoomCode)
       .order("round_number", { ascending: true });
 
     setConfig(configData || null);
@@ -157,11 +162,8 @@ export default function AdminPage() {
 
   const activeParticipants = participants.filter((p) => !p.is_removed);
   const currentRound = config?.current_round ?? 1;
-  const currentRoundRow =
-    rounds.find((r) => r.round_number === currentRound) || null;
-  const currentRoundSubmissions = submissions.filter(
-    (s) => s.round_number === currentRound
-  );
+  const currentRoundRow = rounds.find((r) => r.round_number === currentRound) || null;
+  const currentRoundSubmissions = submissions.filter((s) => s.round_number === currentRound);
   const submittedCount = currentRoundSubmissions.length;
   const allSubmitted =
     activeParticipants.length > 0 &&
@@ -172,38 +174,30 @@ export default function AdminPage() {
   const leaderboard = useMemo(() => {
     return activeParticipants
       .map((participant) => {
-        const participantResults = results.filter(
-          (r) => r.participant_id === participant.id
-        );
+        const participantResults = results.filter((r) => r.participant_id === participant.id);
         const roundsPlayed = participantResults.length;
 
         const avgConsumption =
           roundsPlayed > 0
             ? round2(
-                participantResults.reduce(
-                  (sum, r) => sum + Number(r.consumption_share),
-                  0
-                ) / roundsPlayed
+                participantResults.reduce((sum, r) => sum + Number(r.consumption_share), 0) /
+                  roundsPlayed
               )
             : 0;
 
         const avgSaving =
           roundsPlayed > 0
             ? round2(
-                participantResults.reduce(
-                  (sum, r) => sum + Number(r.saving_share),
-                  0
-                ) / roundsPlayed
+                participantResults.reduce((sum, r) => sum + Number(r.saving_share), 0) /
+                  roundsPlayed
               )
             : 0;
 
         const avgDistance =
           roundsPlayed > 0
             ? round2(
-                participantResults.reduce(
-                  (sum, r) => sum + Number(r.distance_to_target),
-                  0
-                ) / roundsPlayed
+                participantResults.reduce((sum, r) => sum + Number(r.distance_to_target), 0) /
+                  roundsPlayed
               )
             : 9999;
 
@@ -220,7 +214,7 @@ export default function AdminPage() {
   }, [activeParticipants, results]);
 
   async function closeRound() {
-    if (!config) return;
+    if (!config || !roomCode) return;
     setMessage("");
 
     if (!allSubmitted) {
@@ -248,7 +242,7 @@ export default function AdminPage() {
       .from("rounds")
       .upsert(
         {
-          room_code: "default-room",
+          room_code: roomCode,
           round_number: currentRound,
           is_closed: true,
           aggregate_consumption: round2(aggregateConsumption),
@@ -264,8 +258,6 @@ export default function AdminPage() {
       return;
     }
 
-    console.log("Round closed:", currentRound);
-
     const resultRows = activeParticipants.map((participant) => {
       const submission = currentRoundSubmissions.find(
         (s) => s.participant_id === participant.id
@@ -273,14 +265,12 @@ export default function AdminPage() {
       const consumption = Number(submission?.consumption || 0);
       const income = round2(incomePerParticipant);
       const savingAmount = round2(income - consumption);
-      const consumptionShare =
-        income === 0 ? 0 : round2((consumption / income) * 100);
-      const savingShare =
-        income === 0 ? 0 : round2((savingAmount / income) * 100);
+      const consumptionShare = income === 0 ? 0 : round2((consumption / income) * 100);
+      const savingShare = income === 0 ? 0 : round2((savingAmount / income) * 100);
       const distanceToTarget = round2(Math.abs(consumptionShare - 80));
 
       return {
-        room_code: "default-room",
+        room_code: roomCode,
         round_number: currentRound,
         participant_id: participant.id,
         participant_name: participant.display_name,
@@ -307,7 +297,7 @@ export default function AdminPage() {
   }
 
   async function openNextRound() {
-    if (!config) return;
+    if (!config || !roomCode) return;
     setMessage("");
 
     const nextRound = currentRound + 1;
@@ -319,7 +309,7 @@ export default function AdminPage() {
         current_round: finished ? config.max_rounds + 1 : nextRound,
         game_finished: finished,
       })
-      .eq("room_code", "default-room");
+      .eq("room_code", roomCode);
 
     if (error) {
       setMessage(`Could not advance to the next round: ${error.message}`);
@@ -331,7 +321,7 @@ export default function AdminPage() {
         .from("rounds")
         .upsert(
           {
-            room_code: "default-room",
+            room_code: roomCode,
             round_number: nextRound,
             is_closed: false,
           },
@@ -366,55 +356,58 @@ export default function AdminPage() {
   }
 
   async function resetGame() {
-  setMessage("");
+    if (!roomCode) return;
+    setMessage("");
 
-  const confirmReset = window.confirm(
-    "This will clear rounds, submissions, results, and reset the game. Continue?"
-  );
-  if (!confirmReset) return;
-
-  await supabase.from("round_results").delete().eq("room_code", "default-room");
-  await supabase.from("submissions").delete().eq("room_code", "default-room");
-  await supabase.from("rounds").delete().eq("room_code", "default-room");
-
-  const { error } = await supabase
-    .from("game_config")
-    .update({
-      current_round: 1,
-      game_finished: false,
-    })
-    .eq("room_code", "default-room");
-
-  if (error) {
-    setMessage("Could not reset the game.");
-    return;
-  }
-
-  const { error: roundResetError } = await supabase
-    .from("rounds")
-    .upsert(
-      {
-        room_code: "default-room",
-        round_number: 1,
-        is_closed: false,
-      },
-      { onConflict: "room_code,round_number" }
+    const confirmReset = window.confirm(
+      "This will clear rounds, submissions, results, and reset the game. Continue?"
     );
+    if (!confirmReset) return;
 
-  if (roundResetError) {
-    setMessage(
-      `Game reset partially, but round 1 could not be recreated: ${roundResetError.message}`
-    );
-    return;
+    await supabase.from("round_results").delete().eq("room_code", roomCode);
+    await supabase.from("submissions").delete().eq("room_code", roomCode);
+    await supabase.from("rounds").delete().eq("room_code", roomCode);
+
+    const { error } = await supabase
+      .from("game_config")
+      .update({
+        current_round: 1,
+        game_finished: false,
+      })
+      .eq("room_code", roomCode);
+
+    if (error) {
+      setMessage("Could not reset the game.");
+      return;
+    }
+
+    const { error: roundResetError } = await supabase
+      .from("rounds")
+      .upsert(
+        {
+          room_code: roomCode,
+          round_number: 1,
+          is_closed: false,
+        },
+        { onConflict: "room_code,round_number" }
+      );
+
+    if (roundResetError) {
+      setMessage(
+        `Game reset partially, but round 1 could not be recreated: ${roundResetError.message}`
+      );
+      return;
+    }
+
+    setMessage("Game reset.");
+    await loadAll();
   }
-
-  setMessage("Game reset.");
-  await loadAll();
-}
 
   function logout() {
     sessionStorage.removeItem("macro_role");
     sessionStorage.removeItem("macro_name");
+    sessionStorage.removeItem("macro_room_code");
+    sessionStorage.removeItem("macro_admin_title");
     window.location.href = "/";
   }
 
@@ -429,26 +422,20 @@ export default function AdminPage() {
           <div>
             <h1 className="text-3xl font-bold">Admin dashboard</h1>
             <p className="text-slate-800">
-              Manage participants, rounds, submissions, and results.
+              {config?.game_title ? `Managing ${config.game_title}.` : "Manage participants, rounds, submissions, and results."}
             </p>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={logout}
-              className="rounded-lg border bg-white px-4 py-2"
-            >
+            <button onClick={logout} className="rounded-lg border bg-white px-4 py-2">
               Log out
             </button>
-            <button
-              onClick={resetGame}
-              className="rounded-lg bg-red-600 px-4 py-2 text-white"
-            >
+            <button onClick={resetGame} className="rounded-lg bg-red-600 px-4 py-2 text-white">
               Reset game
             </button>
           </div>
         </div>
 
-        <div className="rounded-2xl border-slate-300 bg-white p-6">
+        <div className="rounded-2xl border border-slate-300 bg-white p-6">
           <div className="grid gap-4 md:grid-cols-5">
             <div className="rounded-xl border p-4">
               <div className="text-sm text-slate-700">Round</div>
@@ -466,7 +453,7 @@ export default function AdminPage() {
             </div>
             <div className="rounded-xl border p-4">
               <div className="text-sm text-slate-700">Participant password</div>
-              <div className="text-2xl font-bold">{config?.participant_pin}</div>
+              <div className="text-lg font-bold break-all">{config?.participant_pin}</div>
             </div>
             <div className="rounded-xl border p-4">
               <div className="text-sm text-slate-700">Target</div>
@@ -476,13 +463,13 @@ export default function AdminPage() {
         </div>
 
         {message && (
-          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
             {message}
           </div>
         )}
 
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="rounded-2xl border-slate-300 bg-white p-6 lg:col-span-2">
+          <div className="rounded-2xl border border-slate-300 bg-white p-6 lg:col-span-2">
             <h2 className="text-xl font-semibold">Current round status</h2>
             <div className="mt-4 space-y-4">
               <div className="grid gap-4 md:grid-cols-4">
@@ -529,24 +516,16 @@ export default function AdminPage() {
 
               {currentRoundRow?.is_closed && (
                 <div className="rounded-xl border p-4 text-sm">
-                  <div>
-                    Aggregate consumption: <strong>{currentRoundRow.aggregate_consumption}</strong>
-                  </div>
-                  <div>
-                    Additional investment: <strong>{currentRoundRow.additional_investment}</strong>
-                  </div>
-                  <div>
-                    Aggregate demand: <strong>{currentRoundRow.aggregate_demand}</strong>
-                  </div>
-                  <div>
-                    Income per participant: <strong>{currentRoundRow.income_per_participant}</strong>
-                  </div>
+                  <div>Aggregate consumption: <strong>{currentRoundRow.aggregate_consumption}</strong></div>
+                  <div>Additional investment: <strong>{currentRoundRow.additional_investment}</strong></div>
+                  <div>Aggregate demand: <strong>{currentRoundRow.aggregate_demand}</strong></div>
+                  <div>Income per participant: <strong>{currentRoundRow.income_per_participant}</strong></div>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="rounded-2xl border-slate-300 bg-white p-6">
+          <div className="rounded-2xl border border-slate-300 bg-white p-6">
             <h2 className="text-xl font-semibold">Participants</h2>
             <div className="mt-4 space-y-3">
               {activeParticipants.length === 0 && (
@@ -570,7 +549,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border-slate-300 bg-white p-6">
+        <div className="rounded-2xl border border-slate-300 bg-white p-6">
           <h2 className="text-xl font-semibold">Current round submissions</h2>
           <div className="mt-4 space-y-3">
             {activeParticipants.map((participant) => {
@@ -599,7 +578,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border-slate-300 bg-white p-6">
+        <div className="rounded-2xl border border-slate-300 bg-white p-6">
           <h2 className="text-xl font-semibold">Leaderboard</h2>
           <div className="mt-4 space-y-3">
             {leaderboard.map((entry, index) => (
@@ -619,7 +598,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border-slate-300 bg-white p-6">
+        <div className="rounded-2xl border border-slate-300 bg-white p-6">
           <h2 className="text-xl font-semibold">Round history</h2>
           <div className="mt-4 space-y-6">
             {rounds.length === 0 && (
@@ -680,7 +659,7 @@ export default function AdminPage() {
         </div>
 
         {config?.game_finished && leaderboard[0] && (
-          <div className="rounded-2xl border-slate-300 bg-white p-6">
+          <div className="rounded-2xl border border-slate-300 bg-white p-6">
             <h2 className="text-xl font-semibold">Winner</h2>
             <p className="mt-3 text-lg">
               <strong>{leaderboard[0].participantName}</strong> wins with an average

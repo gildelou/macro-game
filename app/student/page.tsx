@@ -8,7 +8,7 @@ type GameConfig = {
   current_round: number;
   max_rounds: number;
   game_finished: boolean;
-  fixed_income_component_per_participant: number;
+  game_title: string;
 };
 
 type Participant = {
@@ -52,6 +52,7 @@ type RoundResult = {
 
 export default function StudentPage() {
   const [name, setName] = useState("");
+  const [roomCode, setRoomCode] = useState("");
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [config, setConfig] = useState<GameConfig | null>(null);
   const [rounds, setRounds] = useState<RoundRow[]>([]);
@@ -64,41 +65,42 @@ export default function StudentPage() {
   async function loadAll() {
     const storedName = sessionStorage.getItem("macro_name");
     const role = sessionStorage.getItem("macro_role");
+    const storedRoomCode = sessionStorage.getItem("macro_room_code");
 
-  if (!storedName || role !== "participant") {
-  setMessage("Your login session was not found. Please log in again.");
-  setLoading(false);
-  return;
-}
+    if (!storedName || role !== "participant" || !storedRoomCode) {
+      setMessage("Your login session was not found. Please log in again.");
+      setLoading(false);
+      return;
+    }
 
     setName(storedName);
+    setRoomCode(storedRoomCode);
 
     const { data: participantData } = await supabase
       .from("participants")
       .select("*")
-      .eq("room_code", "default-room")
+      .eq("room_code", storedRoomCode)
       .eq("display_name", storedName)
       .maybeSingle();
 
     if (!participantData) {
-  setMessage("Your participant record could not be found. Please log in again.");
-  setLoading(false);
-  return;
-}
+      setMessage("Your participant record could not be found. Please log in again.");
+      setLoading(false);
+      return;
+    }
 
-if (participantData.is_removed) {
-  sessionStorage.removeItem("macro_name");
-  sessionStorage.removeItem("macro_role");
-  window.location.href = "/";
-  return;
-}
+    if (participantData.is_removed) {
+      setMessage("You were removed from this game. Log in again to rejoin.");
+      setLoading(false);
+      return;
+    }
 
     setParticipant(participantData);
 
     const { data: configData } = await supabase
       .from("game_config")
       .select("*")
-      .eq("room_code", "default-room")
+      .eq("room_code", storedRoomCode)
       .single();
 
     if (configData) setConfig(configData);
@@ -106,7 +108,7 @@ if (participantData.is_removed) {
     const { data: roundData } = await supabase
       .from("rounds")
       .select("*")
-      .eq("room_code", "default-room")
+      .eq("room_code", storedRoomCode)
       .order("round_number", { ascending: true });
 
     setRounds(roundData || []);
@@ -114,7 +116,7 @@ if (participantData.is_removed) {
     const { data: submissionData } = await supabase
       .from("submissions")
       .select("*")
-      .eq("room_code", "default-room")
+      .eq("room_code", storedRoomCode)
       .eq("participant_id", participantData.id)
       .order("round_number", { ascending: true });
 
@@ -123,7 +125,7 @@ if (participantData.is_removed) {
     const { data: resultData } = await supabase
       .from("round_results")
       .select("*")
-      .eq("room_code", "default-room")
+      .eq("room_code", storedRoomCode)
       .eq("participant_id", participantData.id)
       .order("round_number", { ascending: true });
 
@@ -202,11 +204,11 @@ if (participantData.is_removed) {
   async function handleSubmit() {
     setMessage("");
 
-    if (!participant) return;
+    if (!participant || !roomCode) return;
 
     const n = Number(value);
     if (!Number.isInteger(n) || n < 0 || n > 1000) {
-      setMessage("Enter a whole number between 0 and 1000.");
+      setMessage("Enter a whole number.");
       return;
     }
 
@@ -216,18 +218,16 @@ if (participantData.is_removed) {
     }
 
     const { error } = await supabase.from("submissions").insert({
-  room_code: "default-room",
-  round_number: currentRound,
-  participant_id: participant.id,
-  consumption: n,
-});
+      room_code: roomCode,
+      round_number: currentRound,
+      participant_id: participant.id,
+      consumption: n,
+    });
 
-if (error) {
-  setMessage(`Could not save your submission: ${error.message}`);
-  return;
-}
-
-console.log("Submission saved for participant:", participant.id, "round:", currentRound);
+    if (error) {
+      setMessage(`Could not save your submission: ${error.message}`);
+      return;
+    }
 
     setValue("");
     setMessage("Submission saved.");
@@ -235,10 +235,11 @@ console.log("Submission saved for participant:", participant.id, "round:", curre
   }
 
   function logout() {
-  sessionStorage.removeItem("macro_name");
-  sessionStorage.removeItem("macro_role");
-  window.location.href = "/";
-}
+    sessionStorage.removeItem("macro_name");
+    sessionStorage.removeItem("macro_role");
+    sessionStorage.removeItem("macro_room_code");
+    window.location.href = "/";
+  }
 
   if (loading) {
     return <main className="min-h-screen p-6">Loading...</main>;
@@ -250,18 +251,17 @@ console.log("Submission saved for participant:", participant.id, "round:", curre
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Student dashboard</h1>
-            <p className="text-slate-800">Welcome, {name}.</p>
+            <p className="text-slate-800">
+              Welcome, {name}. {config?.game_title ? `You are in ${config.game_title}.` : ""}
+            </p>
           </div>
-          <button
-            onClick={logout}
-            className="rounded-lg border bg-white px-4 py-2"
-          >
+          <button onClick={logout} className="rounded-lg border bg-white px-4 py-2">
             Log out
           </button>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border-slate-300 bg-white p-5">
+          <div className="rounded-2xl border border-slate-300 bg-white p-5">
             <div className="text-sm text-slate-700">Goal</div>
             <div className="mt-2 text-3xl font-bold">80% / 20%</div>
             <p className="mt-2 text-sm text-slate-800">
@@ -269,17 +269,17 @@ console.log("Submission saved for participant:", participant.id, "round:", curre
             </p>
           </div>
 
-          <div className="rounded-2xl border-slate-300 bg-white p-5">
+          <div className="rounded-2xl border border-slate-300 bg-white p-5">
             <div className="text-sm text-slate-700">Current round</div>
             <div className="mt-2 text-3xl font-bold">
               {config?.game_finished ? "Finished" : currentRound}
             </div>
             <p className="mt-2 text-sm text-slate-800">
-              Enter a whole number from 0 to 1000.
+              Enter a whole number as your consumption expenditure.
             </p>
           </div>
 
-          <div className="rounded-2xl border-slate-300 bg-white p-5">
+          <div className="rounded-2xl border border-slate-300 bg-white p-5">
             <div className="text-sm text-slate-700">Latest market signal</div>
             {priorRound ? (
               <div className="mt-2 space-y-1 text-sm">
@@ -289,15 +289,13 @@ console.log("Submission saved for participant:", participant.id, "round:", curre
                 <div>Income per participant: <strong>{priorRound.income_per_participant}</strong></div>
               </div>
             ) : (
-              <p className="mt-2 text-sm text-slate-800">
-                No previous round yet.
-              </p>
+              <p className="mt-2 text-sm text-slate-800">No previous round yet.</p>
             )}
           </div>
         </div>
 
         {!config?.game_finished && (
-          <div className="rounded-2xl border-slate-300 bg-white p-6">
+          <div className="rounded-2xl border border-slate-300 bg-white p-6">
             <h2 className="text-xl font-semibold">Submit for round {currentRound}</h2>
             <div className="mt-4 space-y-4">
               <div>
@@ -307,7 +305,6 @@ console.log("Submission saved for participant:", participant.id, "round:", curre
                 <input
                   type="number"
                   min={0}
-                  max={1000}
                   step={1}
                   value={alreadySubmitted ? "" : value}
                   onChange={(e) => setValue(e.target.value)}
@@ -328,7 +325,7 @@ console.log("Submission saved for participant:", participant.id, "round:", curre
         )}
 
         {currentResult && (
-          <div className="rounded-2xl border-slate-300 bg-white p-6">
+          <div className="rounded-2xl border border-slate-300 bg-white p-6">
             <h2 className="text-xl font-semibold">Your round {currentRound} result</h2>
             <div className="mt-4 grid gap-4 md:grid-cols-4">
               <div className="rounded-xl border p-4">
@@ -351,7 +348,7 @@ console.log("Submission saved for participant:", participant.id, "round:", curre
           </div>
         )}
 
-        <div className="rounded-2xl border-slate-300 bg-white p-6">
+        <div className="rounded-2xl border border-slate-300 bg-white p-6">
           <h2 className="text-xl font-semibold">Your performance so far</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-4">
             <div className="rounded-xl border p-4">
@@ -374,7 +371,7 @@ console.log("Submission saved for participant:", participant.id, "round:", curre
         </div>
 
         {message && (
-          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
             {message}
           </div>
         )}

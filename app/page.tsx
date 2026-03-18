@@ -10,109 +10,105 @@ export default function HomePage() {
   const [message, setMessage] = useState("");
 
   async function handleParticipantLogin() {
-  setMessage("");
-
-  const cleanName = name.trim();
-
-  if (!cleanName) {
-    setMessage("Please enter your name.");
-    return;
-  }
-
-  const { data: config, error: configError } = await supabase
-    .from("game_config")
-    .select("*")
-    .eq("room_code", "default-room")
-    .single();
-
-  if (configError || !config) {
-    console.error("Participant config error:", configError);
-    setMessage(
-      `Could not load game configuration: ${configError?.message || "No config row found."}`
-    );
-    return;
-  }
-
-  if (participantPassword !== config.participant_pin) {
-    setMessage("Participant password is incorrect.");
-    return;
-  }
-
-  const { data: existingParticipant, error: existingParticipantError } =
-    await supabase
-      .from("participants")
-      .select("*")
-      .eq("room_code", "default-room")
-      .eq("display_name", cleanName)
-      .maybeSingle();
-
-  if (existingParticipantError) {
-    console.error("Participant lookup error:", existingParticipantError);
-    setMessage(
-      `Could not check participant: ${existingParticipantError.message}`
-    );
-    return;
-  }
-
-  if (existingParticipant) {
-    if (existingParticipant.is_removed) {
-      const { error: reactivateError } = await supabase
-        .from("participants")
-        .update({ is_removed: false })
-        .eq("id", existingParticipant.id);
-
-      if (reactivateError) {
-        console.error("Participant reactivation error:", reactivateError);
-        setMessage(
-          `Could not reactivate participant: ${reactivateError.message}`
-        );
-        return;
-      }
-    }
-  } else {
-    const { error: insertError } = await supabase.from("participants").insert({
-      room_code: "default-room",
-      display_name: cleanName,
-      is_removed: false,
-    });
-
-    if (insertError) {
-      console.error("Participant insert error:", insertError);
-      setMessage(`Could not create participant: ${insertError.message}`);
-      return;
-    }
-  }
-
-  sessionStorage.setItem("macro_role", "participant");
-  sessionStorage.setItem("macro_name", cleanName);
-  window.location.href = "/student";
-}
-
-  async function handleAdminLogin() {
     setMessage("");
 
-    const { data: config, error } = await supabase
+    const cleanName = name.trim();
+
+    if (!cleanName) {
+      setMessage("Please enter your name.");
+      return;
+    }
+
+    const { data: configs, error: configError } = await supabase
       .from("game_config")
       .select("*")
-      .eq("room_code", "default-room")
-      .single();
+      .eq("participant_pin", participantPassword);
 
-    if (error || !config) {
-      console.error("Admin config error:", error);
+    if (configError) {
+      setMessage(`Could not load game configuration: ${configError.message}`);
+      return;
+    }
+
+    const config = configs?.[0];
+
+    if (!config) {
+      setMessage("Participant password is incorrect.");
+      return;
+    }
+
+    const roomCode = config.room_code;
+
+    const { data: existingParticipant, error: existingParticipantError } =
+      await supabase
+        .from("participants")
+        .select("*")
+        .eq("room_code", roomCode)
+        .eq("display_name", cleanName)
+        .maybeSingle();
+
+    if (existingParticipantError) {
       setMessage(
-        `Could not load admin configuration: ${
-          error?.message || "No config row found."
-        }`
+        `Could not check participant: ${existingParticipantError.message}`
       );
       return;
     }
 
-    if (adminPin !== config.admin_pin) {
+    if (existingParticipant) {
+      if (existingParticipant.is_removed) {
+        const { error: reactivateError } = await supabase
+          .from("participants")
+          .update({ is_removed: false })
+          .eq("id", existingParticipant.id);
+
+        if (reactivateError) {
+          setMessage(
+            `Could not reactivate participant: ${reactivateError.message}`
+          );
+          return;
+        }
+      }
+    } else {
+      const { error: insertError } = await supabase.from("participants").insert({
+        room_code: roomCode,
+        display_name: cleanName,
+        is_removed: false,
+      });
+
+      if (insertError) {
+        setMessage(`Could not create participant: ${insertError.message}`);
+        return;
+      }
+    }
+
+    sessionStorage.setItem("macro_role", "participant");
+    sessionStorage.setItem("macro_name", cleanName);
+    sessionStorage.setItem("macro_room_code", roomCode);
+    window.location.href = "/student";
+  }
+
+  async function handleAdminLogin() {
+    setMessage("");
+
+    const { data: configs, error } = await supabase
+      .from("game_config")
+      .select("*")
+      .eq("admin_pin", adminPin);
+
+    if (error) {
+      setMessage(`Could not load admin configuration: ${error.message}`);
+      return;
+    }
+
+    const config = configs?.[0];
+
+    if (!config) {
       setMessage("Admin PIN is incorrect.");
       return;
     }
 
     sessionStorage.setItem("macro_role", "admin");
+    sessionStorage.setItem("macro_room_code", config.room_code);
+    sessionStorage.setItem("macro_admin_title", config.game_title);
     window.location.href = "/admin";
   }
 
@@ -175,14 +171,14 @@ export default function HomePage() {
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-900">
-                  Admin PIN
+                  Admin password
                 </label>
                 <input
                   type="password"
                   className="w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-950 placeholder-slate-500"
                   value={adminPin}
                   onChange={(e) => setAdminPin(e.target.value)}
-                  placeholder="Enter admin PIN"
+                  placeholder="Enter admin password"
                 />
               </div>
               <button

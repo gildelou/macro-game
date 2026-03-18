@@ -38,21 +38,26 @@ export default function HomePage() {
       return;
     }
 
-    const { data: existingParticipant, error: existingParticipantError } = await supabase
-      .from("participants")
-      .select("*")
-      .eq("room_code", "default-room")
-      .eq("display_name", cleanName)
-      .maybeSingle();
+    const { data: existingParticipant, error: existingParticipantError } =
+      await supabase
+        .from("participants")
+        .select("*")
+        .eq("room_code", "default-room")
+        .eq("display_name", cleanName)
+        .maybeSingle();
 
     if (existingParticipantError) {
       console.error("Participant lookup error:", existingParticipantError);
-      setMessage(`Could not check participant: ${existingParticipantError.message}`);
+      setMessage(
+        `Could not check participant: ${existingParticipantError.message}`
+      );
       return;
     }
 
     if (existingParticipant?.is_removed) {
-      setMessage("This participant name was removed by the admin. Use another name.");
+      setMessage(
+        "This participant name was removed by the admin. Use another name."
+      );
       return;
     }
 
@@ -86,7 +91,9 @@ export default function HomePage() {
     if (error || !config) {
       console.error("Admin config error:", error);
       setMessage(
-        `Could not load admin configuration: ${error?.message || "No config row found."}`
+        `Could not load admin configuration: ${
+          error?.message || "No config row found."
+        }`
       );
       return;
     }
@@ -101,13 +108,13 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
+    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-950 sm:px-6">
       <div className="mx-auto max-w-5xl space-y-6">
-        <div className="space-y-2 text-center">
-          <h1 className="text-4xl font-bold tracking-tight">
+        <div className="space-y-3 text-center">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
             Aggregate Demand Classroom Game
           </h1>
-          <p className="mx-auto max-w-3xl text-slate-600">
+          <p className="mx-auto max-w-3xl text-base leading-7 text-slate-800">
             After all entries are collected, the app computes aggregate
             consumption, investment, aggregate demand, income, and each
             participant&apos;s consumption-saving split.
@@ -115,25 +122,29 @@ export default function HomePage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-2xl border bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-xl font-semibold">Participant login</h2>
+          <div className="rounded-2xl border border-slate-300 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-xl font-semibold text-slate-950">
+              Participant login
+            </h2>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium">Your name</label>
+                <label className="mb-1 block text-sm font-medium text-slate-900">
+                  Your name
+                </label>
                 <input
-                  className="w-full rounded-lg border p-3"
+                  className="w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-950 placeholder-slate-500"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter your name"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">
+                <label className="mb-1 block text-sm font-medium text-slate-900">
                   Participant password
                 </label>
                 <input
                   type="password"
-                  className="w-full rounded-lg border p-3"
+                  className="w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-950 placeholder-slate-500"
                   value={participantPassword}
                   onChange={(e) => setParticipantPassword(e.target.value)}
                   placeholder="Enter shared password"
@@ -141,21 +152,25 @@ export default function HomePage() {
               </div>
               <button
                 onClick={handleParticipantLogin}
-                className="w-full rounded-lg bg-black px-4 py-3 text-white"
+                className="w-full rounded-lg bg-black px-4 py-3 font-medium text-white"
               >
                 Enter as participant
               </button>
             </div>
           </div>
 
-          <div className="rounded-2xl border bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-xl font-semibold">Admin login</h2>
+          <div className="rounded-2xl border border-slate-300 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-xl font-semibold text-slate-950">
+              Admin login
+            </h2>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium">Admin PIN</label>
+                <label className="mb-1 block text-sm font-medium text-slate-900">
+                  Admin PIN
+                </label>
                 <input
                   type="password"
-                  className="w-full rounded-lg border p-3"
+                  className="w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-950 placeholder-slate-500"
                   value={adminPin}
                   onChange={(e) => setAdminPin(e.target.value)}
                   placeholder="Enter admin PIN"
@@ -163,7 +178,7 @@ export default function HomePage() {
               </div>
               <button
                 onClick={handleAdminLogin}
-                className="w-full rounded-lg bg-slate-700 px-4 py-3 text-white"
+                className="w-full rounded-lg bg-slate-800 px-4 py-3 font-medium text-white"
               >
                 Enter as admin
               </button>
@@ -172,7 +187,7 @@ export default function HomePage() {
         </div>
 
         {message && (
-          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
             {message}
           </div>
         )}

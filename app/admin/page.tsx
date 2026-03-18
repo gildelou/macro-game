@@ -366,53 +366,51 @@ export default function AdminPage() {
   }
 
   async function resetGame() {
-    setMessage("");
+  setMessage("");
 
-    const confirmReset = window.confirm(
-      "This will clear rounds, submissions, results, and reset the game. Continue?"
-    );
-    if (!confirmReset) return;
+  const confirmReset = window.confirm(
+    "This will clear rounds, submissions, results, and reset the game. Continue?"
+  );
+  if (!confirmReset) return;
 
-    await supabase.from("round_results").delete().eq("room_code", "default-room");
-    await supabase.from("submissions").delete().eq("room_code", "default-room");
-    await supabase.from("rounds").delete().eq("room_code", "default-room");
-    await supabase
-      .from("participants")
-      .update({ is_removed: false })
-      .eq("room_code", "default-room");
+  await supabase.from("round_results").delete().eq("room_code", "default-room");
+  await supabase.from("submissions").delete().eq("room_code", "default-room");
+  await supabase.from("rounds").delete().eq("room_code", "default-room");
 
-    const { error } = await supabase
-      .from("game_config")
-      .update({
-        current_round: 1,
-        game_finished: false,
-      })
-      .eq("room_code", "default-room");
+  const { error } = await supabase
+    .from("game_config")
+    .update({
+      current_round: 1,
+      game_finished: false,
+    })
+    .eq("room_code", "default-room");
 
-    if (error) {
-      setMessage("Could not reset the game.");
-      return;
-    }
-
-    const { error: roundResetError } = await supabase
-      .from("rounds")
-      .upsert(
-        {
-          room_code: "default-room",
-          round_number: 1,
-          is_closed: false,
-        },
-        { onConflict: "room_code,round_number" }
-      );
-
-    if (roundResetError) {
-      setMessage(`Game reset partially, but round 1 could not be recreated: ${roundResetError.message}`);
-      return;
-    }
-
-    setMessage("Game reset.");
-    await loadAll();
+  if (error) {
+    setMessage("Could not reset the game.");
+    return;
   }
+
+  const { error: roundResetError } = await supabase
+    .from("rounds")
+    .upsert(
+      {
+        room_code: "default-room",
+        round_number: 1,
+        is_closed: false,
+      },
+      { onConflict: "room_code,round_number" }
+    );
+
+  if (roundResetError) {
+    setMessage(
+      `Game reset partially, but round 1 could not be recreated: ${roundResetError.message}`
+    );
+    return;
+  }
+
+  setMessage("Game reset.");
+  await loadAll();
+}
 
   function logout() {
     sessionStorage.removeItem("macro_role");

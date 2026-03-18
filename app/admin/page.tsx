@@ -63,6 +63,10 @@ function round2(n: number) {
   return Math.round(n * 100) / 100;
 }
 
+function getExogenousAmountPerParticipant(roundNumber: number) {
+  return roundNumber >= 6 ? 200 : 100;
+}
+
 export default function AdminPage() {
   const [roomCode, setRoomCode] = useState("");
   const [config, setConfig] = useState<GameConfig | null>(null);
@@ -171,6 +175,8 @@ export default function AdminPage() {
       currentRoundSubmissions.some((s) => s.participant_id === p.id)
     );
 
+  const currentExogenousAmount = getExogenousAmountPerParticipant(currentRound);
+
   const leaderboard = useMemo(() => {
     return activeParticipants
       .map((participant) => {
@@ -227,16 +233,18 @@ export default function AdminPage() {
       0
     );
 
+    const exogenousAmountPerParticipant = getExogenousAmountPerParticipant(currentRound);
+
     const additionalInvestment =
-      activeParticipants.length * config.fixed_investment_per_participant;
+      activeParticipants.length * exogenousAmountPerParticipant;
 
     const aggregateDemand = aggregateConsumption + additionalInvestment;
 
     const incomePerParticipant =
       activeParticipants.length > 0
         ? aggregateConsumption / activeParticipants.length +
-          config.fixed_income_component_per_participant
-        : config.fixed_income_component_per_participant;
+          exogenousAmountPerParticipant
+        : exogenousAmountPerParticipant;
 
     const { error: upsertRoundError } = await supabase
       .from("rounds")
@@ -422,7 +430,9 @@ export default function AdminPage() {
           <div>
             <h1 className="text-3xl font-bold">Admin dashboard</h1>
             <p className="text-slate-800">
-              {config?.game_title ? `Managing ${config.game_title}.` : "Manage participants, rounds, submissions, and results."}
+              {config?.game_title
+                ? `Managing ${config.game_title}.`
+                : "Manage participants, rounds, submissions, and results."}
             </p>
           </div>
           <div className="flex gap-2">
@@ -456,8 +466,8 @@ export default function AdminPage() {
               <div className="text-lg font-bold break-all">{config?.participant_pin}</div>
             </div>
             <div className="rounded-xl border p-4">
-              <div className="text-sm text-slate-700">Target</div>
-              <div className="text-2xl font-bold">80 / 20</div>
+              <div className="text-sm text-slate-700">Exogenous amount</div>
+              <div className="text-2xl font-bold">{currentExogenousAmount}</div>
             </div>
           </div>
         </div>
@@ -494,6 +504,15 @@ export default function AdminPage() {
                   <div className="text-2xl font-bold">
                     {config?.game_finished ? "Finished" : "Active"}
                   </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border p-4 text-sm">
+                <div>
+                  Rounds 1–5 use an exogenous amount of <strong>100</strong> per participant.
+                </div>
+                <div>
+                  Rounds 6–10 use an exogenous amount of <strong>200</strong> per participant.
                 </div>
               </div>
 

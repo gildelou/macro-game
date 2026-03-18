@@ -9,71 +9,70 @@ export default function HomePage() {
   const [adminPin, setAdminPin] = useState("");
   const [message, setMessage] = useState("");
 
-  
   async function handleParticipantLogin() {
-  setMessage("");
+    setMessage("");
 
-  const cleanName = name.trim();
+    const cleanName = name.trim();
 
-  if (!cleanName) {
-    setMessage("Please enter your name.");
-    return;
-  }
-
-  const { data: config, error: configError } = await supabase
-    .from("game_config")
-    .select("*")
-    .eq("room_code", "default-room")
-    .single();
-
-  if (configError || !config) {
-    console.error("Participant config error:", configError);
-    setMessage(
-      `Could not load game configuration: ${configError?.message || "No config row found."}`
-    );
-    return;
-  }
-
-  if (participantPassword !== config.participant_pin) {
-    setMessage("Participant password is incorrect.");
-    return;
-  }
-
-  const { data: existingParticipant, error: existingParticipantError } = await supabase
-    .from("participants")
-    .select("*")
-    .eq("room_code", "default-room")
-    .eq("display_name", cleanName)
-    .maybeSingle();
-
-  if (existingParticipantError) {
-    console.error("Participant lookup error:", existingParticipantError);
-    setMessage(`Could not check participant: ${existingParticipantError.message}`);
-    return;
-  }
-
-  if (existingParticipant?.is_removed) {
-    setMessage("This participant name was removed by the admin. Use another name.");
-    return;
-  }
-
-  if (!existingParticipant) {
-    const { error: insertError } = await supabase.from("participants").insert({
-      room_code: "default-room",
-      display_name: cleanName,
-    });
-
-    if (insertError) {
-      console.error("Participant insert error:", insertError);
-      setMessage(`Could not create participant: ${insertError.message}`);
+    if (!cleanName) {
+      setMessage("Please enter your name.");
       return;
     }
-  }
 
-  sessionStorage.setItem("macro_role", "participant");
-  sessionStorage.setItem("macro_name", cleanName);
-  window.location.href = "/student";
-}  
+    const { data: config, error: configError } = await supabase
+      .from("game_config")
+      .select("*")
+      .eq("room_code", "default-room")
+      .single();
+
+    if (configError || !config) {
+      console.error("Participant config error:", configError);
+      setMessage(
+        `Could not load game configuration: ${configError?.message || "No config row found."}`
+      );
+      return;
+    }
+
+    if (participantPassword !== config.participant_pin) {
+      setMessage("Participant password is incorrect.");
+      return;
+    }
+
+    const { data: existingParticipant, error: existingParticipantError } = await supabase
+      .from("participants")
+      .select("*")
+      .eq("room_code", "default-room")
+      .eq("display_name", cleanName)
+      .maybeSingle();
+
+    if (existingParticipantError) {
+      console.error("Participant lookup error:", existingParticipantError);
+      setMessage(`Could not check participant: ${existingParticipantError.message}`);
+      return;
+    }
+
+    if (existingParticipant?.is_removed) {
+      setMessage("This participant name was removed by the admin. Use another name.");
+      return;
+    }
+
+    if (!existingParticipant) {
+      const { error: insertError } = await supabase.from("participants").insert({
+        room_code: "default-room",
+        display_name: cleanName,
+      });
+
+      if (insertError) {
+        console.error("Participant insert error:", insertError);
+        setMessage(`Could not create participant: ${insertError.message}`);
+        return;
+      }
+    }
+
+    sessionStorage.setItem("macro_role", "participant");
+    sessionStorage.setItem("macro_name", cleanName);
+    window.location.href = "/student";
+  }
 
   async function handleAdminLogin() {
     setMessage("");
@@ -109,10 +108,9 @@ export default function HomePage() {
             Aggregate Demand Classroom Game
           </h1>
           <p className="mx-auto max-w-3xl text-slate-600">
-            Students enter a consumption amount between 0 and 1000. When all
-            inputs are collected, the app computes aggregate consumption,
-            investment, aggregate demand, income, and each participant&apos;s
-            consumption-saving split.
+            After all entries are collected, the app computes aggregate
+            consumption, investment, aggregate demand, income, and each
+            participant&apos;s consumption-saving split.
           </p>
         </div>
 

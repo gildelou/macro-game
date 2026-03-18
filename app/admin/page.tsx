@@ -67,6 +67,180 @@ function getExogenousAmountPerParticipant(roundNumber: number) {
   return roundNumber >= 6 ? 200 : 100;
 }
 
+function AverageConsumptionChart({
+  data,
+  maxRounds,
+}: {
+  data: { round: number; averageConsumption: number }[];
+  maxRounds: number;
+}) {
+  const width = 720;
+  const height = 280;
+  const paddingLeft = 52;
+  const paddingRight = 20;
+  const paddingTop = 20;
+  const paddingBottom = 40;
+
+  const chartWidth = width - paddingLeft - paddingRight;
+  const chartHeight = height - paddingTop - paddingBottom;
+
+  const maxY = Math.max(100, ...data.map((d) => d.averageConsumption));
+  const yTop = Math.ceil(maxY / 50) * 50;
+
+  const xForRound = (round: number) => {
+    if (maxRounds <= 1) return paddingLeft;
+    return paddingLeft + ((round - 1) / (maxRounds - 1)) * chartWidth;
+  };
+
+  const yForValue = (value: number) => {
+    if (yTop === 0) return paddingTop + chartHeight;
+    return paddingTop + chartHeight - (value / yTop) * chartHeight;
+  };
+
+  const points = data.map((d) => ({
+    ...d,
+    x: xForRound(d.round),
+    y: yForValue(d.averageConsumption),
+  }));
+
+  const polylinePoints = points.map((p) => `${p.x},${p.y}`).join(" ");
+
+  const yTicks = 5;
+  const tickValues = Array.from({ length: yTicks + 1 }, (_, i) => (yTop / yTicks) * i);
+
+  return (
+    <div className="rounded-2xl border border-slate-300 bg-white p-6">
+      <h2 className="text-xl font-semibold">Average consumption by round</h2>
+      <p className="mt-2 text-sm text-slate-800">
+        This shows the average of participants&apos; consumption decisions in each completed round.
+      </p>
+
+      <div className="mt-4 overflow-x-auto">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="min-w-[720px]"
+          role="img"
+          aria-label="Average consumption by round line chart"
+        >
+          <rect x="0" y="0" width={width} height={height} fill="white" />
+
+          {tickValues.map((tick) => {
+            const y = yForValue(tick);
+            return (
+              <g key={tick}>
+                <line
+                  x1={paddingLeft}
+                  y1={y}
+                  x2={width - paddingRight}
+                  y2={y}
+                  stroke="#e2e8f0"
+                  strokeWidth="1"
+                />
+                <text
+                  x={paddingLeft - 8}
+                  y={y + 4}
+                  textAnchor="end"
+                  fontSize="12"
+                  fill="#334155"
+                >
+                  {round2(tick)}
+                </text>
+              </g>
+            );
+          })}
+
+          {Array.from({ length: maxRounds }, (_, i) => i + 1).map((round) => {
+            const x = xForRound(round);
+            return (
+              <g key={round}>
+                <line
+                  x1={x}
+                  y1={paddingTop}
+                  x2={x}
+                  y2={paddingTop + chartHeight}
+                  stroke="#f1f5f9"
+                  strokeWidth="1"
+                />
+                <text
+                  x={x}
+                  y={height - 12}
+                  textAnchor="middle"
+                  fontSize="12"
+                  fill="#334155"
+                >
+                  {round}
+                </text>
+              </g>
+            );
+          })}
+
+          <line
+            x1={paddingLeft}
+            y1={paddingTop + chartHeight}
+            x2={width - paddingRight}
+            y2={paddingTop + chartHeight}
+            stroke="#334155"
+            strokeWidth="1.5"
+          />
+          <line
+            x1={paddingLeft}
+            y1={paddingTop}
+            x2={paddingLeft}
+            y2={paddingTop + chartHeight}
+            stroke="#334155"
+            strokeWidth="1.5"
+          />
+
+          {points.length > 1 && (
+            <polyline
+              fill="none"
+              stroke="#0f172a"
+              strokeWidth="3"
+              points={polylinePoints}
+            />
+          )}
+
+          {points.map((p) => (
+            <g key={p.round}>
+              <circle cx={p.x} cy={p.y} r="5" fill="#0f172a" />
+              <text
+                x={p.x}
+                y={p.y - 10}
+                textAnchor="middle"
+                fontSize="12"
+                fill="#0f172a"
+              >
+                {round2(p.averageConsumption)}
+              </text>
+            </g>
+          ))}
+
+          <text
+            x={width / 2}
+            y={height - 2}
+            textAnchor="middle"
+            fontSize="13"
+            fill="#0f172a"
+          >
+            Round
+          </text>
+
+          <text
+            x={18}
+            y={height / 2}
+            textAnchor="middle"
+            fontSize="13"
+            fill="#0f172a"
+            transform={`rotate(-90 18 ${height / 2})`}
+          >
+            Average consumption
+          </text>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [roomCode, setRoomCode] = useState("");
   const [config, setConfig] = useState<GameConfig | null>(null);
@@ -131,7 +305,7 @@ export default function AdminPage() {
     loadAll();
 
     const channel = supabase
-      .channel("admin-live")
+      .channel(`admin-live-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "game_config" },
@@ -218,6 +392,35 @@ export default function AdminPage() {
       })
       .sort((a, b) => a.avgDistance - b.avgDistance);
   }, [activeParticipants, results]);
+
+  const averageConsumptionChartData = useMemo(() => {
+    return rounds
+      .filter((round) => round.is_closed)
+      .map((round) => {
+        const roundSubs = submissions.filter((s) => s.round_number === round.round_number);
+        const activeParticipantIds = participants
+          .filter((p) => !p.is_removed)
+          .map((p) => p.id);
+
+        const relevantSubs = roundSubs.filter((s) =>
+          activeParticipantIds.includes(s.participant_id)
+        );
+
+        const avg =
+          relevantSubs.length > 0
+            ? round2(
+                relevantSubs.reduce((sum, s) => sum + Number(s.consumption), 0) /
+                  relevantSubs.length
+              )
+            : 0;
+
+        return {
+          round: round.round_number,
+          averageConsumption: avg,
+        };
+      })
+      .sort((a, b) => a.round - b.round);
+  }, [rounds, submissions, participants]);
 
   async function closeRound() {
     if (!config || !roomCode) return;
@@ -477,6 +680,11 @@ export default function AdminPage() {
             {message}
           </div>
         )}
+
+        <AverageConsumptionChart
+          data={averageConsumptionChartData}
+          maxRounds={config?.max_rounds ?? 10}
+        />
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="rounded-2xl border border-slate-300 bg-white p-6 lg:col-span-2">

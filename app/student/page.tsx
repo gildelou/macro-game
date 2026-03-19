@@ -207,8 +207,8 @@ export default function StudentPage() {
     if (!participant || !roomCode) return;
 
     const n = Number(value);
-    if (!Number.isInteger(n) || n < 0 || n > 1000) {
-      setMessage("Enter a whole number.");
+    if (!Number.isInteger(n) || n < 0 || n > 10000) {
+      setMessage("Enter a whole number between 0 and 10000");
       return;
     }
 
@@ -305,6 +305,7 @@ export default function StudentPage() {
                 <input
                   type="number"
                   min={0}
+                  max={10000}
                   step={1}
                   value={alreadySubmitted ? "" : value}
                   onChange={(e) => setValue(e.target.value)}
